@@ -5,11 +5,11 @@ FROM node:18.17.0-alpine AS base
 WORKDIR /app
 
 # Install dependencies
-COPY package.json package-lock.json /app 
+COPY package.json package-lock.json /app/ 
 RUN npm install 
 
 # Copy all files to the image
-COPY . /app
+COPY . /app/
 
 # Expose port
 EXPOSE 3000
