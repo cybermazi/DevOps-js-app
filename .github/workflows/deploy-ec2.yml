@@ -29,7 +29,7 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t my-new-image:latest .
+        run: docker build -t node-app:latest .
 
   deploy_to_ec2:
     runs-on: ubuntu-latest
