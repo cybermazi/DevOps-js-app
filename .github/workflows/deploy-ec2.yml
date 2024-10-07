@@ -31,7 +31,7 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t node-app:latest -f my-node-app/Dockerfile ./my-node-app
+        run: docker build -t node-app:latest -f my-node-app/Dockerfile .
 
       #Verify docker image exists
       - name: Verify Docker image
