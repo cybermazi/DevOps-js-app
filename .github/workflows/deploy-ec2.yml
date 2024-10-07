@@ -1,12 +1,17 @@
 name: Update and Deploy Node.js App as Container
 
 on:
-  push:
+  pull_request:
     branches: [main]
 
 jobs:
   update_repository:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:latest
+        options: --privileged  # Enable privileged mode for the Docker service
+
     steps:
       # Checkout the repository
       - name: Checkout Code
@@ -24,7 +29,7 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t node-app:latest .
+        run: docker build -t my-new-image:latest .
 
   deploy_to_ec2:
     runs-on: ubuntu-latest
@@ -37,7 +42,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.HOST_DNS }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ~ # Deploying to the specified app directory
+          TARGET: ~/my-node-app  # Deploying to the specified app directory
           SOURCE: .  # Path of the files you want to deploy
 
       # Run the new Docker container
@@ -49,9 +54,13 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Stop and remove all running containers
-            docker stop $(docker ps -q) || true
-            docker rm $(docker ps -aq) || true
+            # Stop and remove all running containers if they exist
+            if [ "$(docker ps -q)" ]; then
+                docker stop $(docker ps -q)
+            fi
+            if [ "$(docker ps -aq)" ]; then
+                docker rm $(docker ps -aq)
+            fi
             
-            # Run the new Docker image with a generic name
+            # Run the new Docker image
             docker run -d -p 3000:3000 --name node-app my-new-image:latest
