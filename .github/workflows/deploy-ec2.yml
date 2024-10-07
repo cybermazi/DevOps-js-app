@@ -1,0 +1,65 @@
+name: Update and Deploy Node.js App as Container
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  update_repository:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Setup Node.js environment and install dependencies
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Install npm dependencies
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Build the Node.js application
+      - name: Build the application
+        run: npm run build
+
+      # Build the Docker image
+      - name: Build Docker image
+        run: docker build -t node-app:latest .
+
+  deploy_to_ec2:
+    runs-on: ubuntu-latest
+    needs: update_repository
+    steps:
+      # Deploy to EC2 using SSH
+      - name: Deploy to EC2
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: ~  # Deploying to the specified app directory
+          SOURCE: .  # Path of the files you want to deploy
+
+      # Optionally, run additional commands with sudo
+      - name: Run Docker script
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # Navigate to the app directory
+            cd ~/my-node-app || exit
+            
+            #stop and remove any running container
+            docker stop $(docker ps -q) || true
+            docker rm $(docker ps -aq)|| true
+
+            #run the new docker image
+            docker run -d -p 3000:3000 --name node-app:latest
+         
