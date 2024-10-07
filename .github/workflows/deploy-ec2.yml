@@ -31,7 +31,11 @@ jobs:
 
       # Build the Docker image
       - name: Build Docker image
-        run: docker build -t node-app:latest .
+        run: docker build -t node-app:latest ./my-node-app
+
+      #Verify docker image exists
+      - name: Verify Docker image
+        run: docker images
 
   deploy_to_ec2:
     runs-on: ubuntu-latest
@@ -45,7 +49,7 @@ jobs:
           REMOTE_HOST: ${{ secrets.HOST_DNS }}
           REMOTE_USER: ${{ secrets.USERNAME }}
           TARGET: ~/my-node-app  # Deploying to the specified app directory
-          SOURCE: .  # Path of the files you want to deploy
+          SOURCE: ./my-node-app  # Path of the files you want to deploy
 
       # Run the new Docker container
       - name: Run Docker container
@@ -65,4 +69,4 @@ jobs:
             fi
             
             # Run the new Docker image
-            sudo docker run -d -p 3000:3000 --name node-app my-new-image:latest
+            sudo docker run -d -p 3000:3000 --name node-app node-app:latest
