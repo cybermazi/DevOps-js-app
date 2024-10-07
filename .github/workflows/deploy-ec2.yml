@@ -1,6 +1,8 @@
 name: Update and Deploy Node.js App as Container
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
