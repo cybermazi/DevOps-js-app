@@ -22,10 +22,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # Build the Node.js application
-      - name: Build the application
-        run: npm run build
-
       # Build the Docker image
       - name: Build Docker image
         run: docker build -t node-app:latest .
@@ -41,11 +37,11 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.HOST_DNS }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ~  # Deploying to the specified app directory
+          TARGET: ~ # Deploying to the specified app directory
           SOURCE: .  # Path of the files you want to deploy
 
-      # Optionally, run additional commands with sudo
-      - name: Run Docker script
+      # Run the new Docker container
+      - name: Run Docker container
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.HOST_DNS }}
@@ -53,13 +49,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Navigate to the app directory
-            cd ~/my-node-app || exit
-            
-            #stop and remove any running container
+            # Stop and remove all running containers
             docker stop $(docker ps -q) || true
-            docker rm $(docker ps -aq)|| true
-
-            #run the new docker image
-            docker run -d -p 3000:3000 --name node-app:latest
-         
+            docker rm $(docker ps -aq) || true
+            
+            # Run the new Docker image with a generic name
+            docker run -d -p 3000:3000 --name node-app my-new-image:latest
