@@ -12,28 +12,23 @@ jobs:
     services:
       docker:
         image: docker:latest
-        options: --privileged  # Enable privileged mode for the Docker service
+        options: --privileged
 
     steps:
-      # Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Setup Node.js environment and install dependencies
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
-      # Install npm dependencies
       - name: Install npm dependencies
         run: npm ci
 
-      # Build the Docker image
       - name: Build Docker image
         run: docker build -t node-app:latest .
 
-      #Verify docker image exists
       - name: Verify Docker image
         run: docker images
 
@@ -41,17 +36,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: update_repository
     steps:
-      # Deploy to EC2 using SSH
       - name: Deploy to EC2
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           REMOTE_HOST: ${{ secrets.HOST_DNS }}
           REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ~/my-node-app  # Deploying to the specified app directory
-          SOURCE: ./  # Path of the files you want to deploy
+          TARGET: ~/my-node-app
+          SOURCE: ./ 
 
-      # Build the Docker image on EC2
       - name: Build Docker image on EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -63,7 +56,6 @@ jobs:
             cd ~/my-node-app
             sudo docker build -t node-app:latest .
 
-      # Run the new Docker container on EC2
       - name: Run Docker container on EC2
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -72,13 +64,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Stop and remove all running containers if they exist
-            if [ "$(sudo docker ps -q)" ]; then
-                sudo docker stop $(docker ps -q)
+            # Stop and remove existing container named node-app if it exists
+            if [ "$(sudo docker ps -q -f name=node-app)" ]; then
+                sudo docker stop node-app
+                sudo docker rm node-app
             fi
-            if [ "$(sudo docker ps -aq)" ]; then
-                sudo docker rm $(docker ps -aq)
-            fi
-            
+
             # Run the newly built Docker image
             sudo docker run -d -p 3000:3000 --name node-app node-app:latest
