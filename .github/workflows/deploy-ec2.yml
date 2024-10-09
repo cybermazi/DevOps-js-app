@@ -7,12 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  update_repository:
+  build_and_push:
     runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:latest
-        options: --privileged
 
     steps:
       - name: Checkout Code
@@ -21,32 +17,30 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'  # Updated Node.js version
 
       - name: Install npm dependencies
         run: npm ci
 
       - name: Build Docker image
-        run: docker build -t node-app:latest .
+        run: docker build -t takalezi6/node-app:${{ github.sha }} .
 
-      - name: Verify Docker image
-        run: docker images
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        run: docker push takalezi6/node-app:${{ github.sha }}
 
   deploy_to_ec2:
     runs-on: ubuntu-latest
-    needs: update_repository
-    steps:
-      - name: Deploy to EC2
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.HOST_DNS }}
-          REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ~/my-node-app
-          SOURCE: ./ 
+    needs: build_and_push
 
-      - name: Build Docker image on EC2
-        uses: appleboy/ssh-action@v0.1.8
+    steps:
+      - name: Deploy, Pull, and Run Docker on EC2
+        uses: appleboy/ssh-action@v0.1.16  # Updated to the latest stable version
         with:
           host: ${{ secrets.HOST_DNS }}
           username: ${{ secrets.USERNAME }}
@@ -54,21 +48,14 @@ jobs:
           port: 22
           script: |
             cd ~/my-node-app
-            sudo docker build -t node-app:latest .
-
-      - name: Run Docker container on EC2
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
-            # Stop and remove existing container named node-app if it exists
+            #Pull the latest Docker image from the registry
+            sudo docker pull takalezi6/node-app:${{ github.sha }}
+            
+            #Stop and remove existing container named node-app if it exists
             if [ "$(sudo docker ps -q -f name=node-app)" ]; then
                 sudo docker stop node-app
                 sudo docker rm node-app
             fi
 
-            # Run the newly built Docker image
-            sudo docker run -d -p 3000:3000 --name node-app node-app:latest
+            # Run the newly pulled Docker image with a specific tag
+            sudo docker run -d -p 3000:3000 --name node-app takalezi6/node-app:${{ github.sha }}
