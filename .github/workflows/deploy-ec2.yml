@@ -56,4 +56,4 @@ jobs:
                 sudo docker rm node-app
             fi
  # Run the newly pulled Docker image with a specific tag (github.sha)
-            sudo docker run -d -p 3000:3000 --name node-app takalezi6/node-app:${{ github.sha }}
+                sudo docker run -d -p 3000:3000 --name node-app takalezi6/node-app:${{ github.sha }}
